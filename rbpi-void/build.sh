@@ -19,14 +19,14 @@ EOF
 
 set +e
 error=0
-for bin in mkfs.vfat mkfs.ext4 tar parted dd kpartx losetup;do
-  if ! which $bin; then
+for bin in mkfs.vfat mkfs.ext4 mkfs.f2fs tar parted dd kpartx losetup;do
+  if ! which $bin &>/dev/null; then
     echo $bin not found in PATH. Please make this binary available
     error=1
   fi
 done
 
-[ error -eq 1 ] && {
+[[ $error -eq 1 ]] && {
   echo Essential binaries not found. Exiting.
   exit 1
 }
@@ -50,12 +50,12 @@ BUILD=$(pwd)/build
 BUILDDIR=$(mktemp -d /tmp/squeezie-build-XXX)
 
 
-IMAGENAME="squeezie-raspberry.img"
+IMAGENAME="squeezie-raspberry-$(date +%Y%m%d).img"
 
 IMAGESIZE='800M'
 
 echo Creating sparse image $IMAGENAME in $BUILDDIR
-mkdir -pv ${BUILDDIR}/{out,mnt}
+mkdir -pv ${BUILDDIR}/{out,mnt} ${BUILD}
 IPATH="${BUILDDIR}/out/${IMAGENAME}"
 MNT="${BUILDDIR}/mnt"
 dd if=/dev/zero of=${IPATH} bs=1 count=0 seek=$IMAGESIZE
@@ -98,9 +98,9 @@ echo Creating filesystems
 ROOTPART=/dev/mapper/${LNAME}p2
 BOOTPART=/dev/mapper/${LNAME}p1
 sudo mkfs.vfat -F32 $BOOTPART
-sudo mkfs.ext4 -O ^has_journal $ROOTPART
+sudo mkfs.f2fs $ROOTPART
 
-echo Mounting image ar $MNT
+echo Mounting image at $MNT
 sudo mount "$ROOTPART" "${MNT}"
 sudo mkdir "${MNT}/boot"
 sudo mount "$BOOTPART" "${MNT}/boot"
@@ -109,8 +109,11 @@ echo Extracting ${VOIDIMAGE}
 sudo tar xfJp ${BUILD}/${VOIDIMAGE} -C "${MNT}"
 sudo sync
 
+
 echo Setting up chroot
 
+sudo mkdir -p ${MNT}/var/cache/xbps
+sudo mount tmpfs -t tmpfs -o size=1024M ${MNT}/var/cache/xbps
 # now actually do some work
 sudo cp $QEMU ${MNT}/usr/local/bin
 for a in sys dev proc;do
@@ -121,6 +124,7 @@ chmod +x ${BUILD}/${SQUEEZE}
 sudo cp ${BUILD}/${SQUEEZE} ${MNT}/usr/local/bin/squeezelite
 set +e
 sudo cp image-bootstrap.sh ${MNT}/
+sudo cp cmdline.txt ${MNT}/boot/
 sudo cp rc.conf ${MNT}/etc/
 #sudo chroot ${MNT} /bin/bash
 sudo chroot ${MNT} /image-bootstrap.sh

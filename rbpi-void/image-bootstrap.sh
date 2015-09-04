@@ -43,6 +43,6 @@ sv start alsa || exit 1
 sv start dhcpcd || exit 1
 >/var/log/squeeze.log
 . /etc/squeezelite.cfg
-exec /usr/local/bin/squeezelite -s \$SERVER -n \$NAME -o \$OUTPUT -d all=\$LOGLEVEL -f /var/log/squeeze.log
+exec chpst -u squeezie:squeezie /usr/local/bin/squeezelite -s \$SERVER -n \$NAME -o \$OUTPUT -d all=\$LOGLEVEL -f /var/log/squeeze.log
 EOF
 

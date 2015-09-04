@@ -1,2 +1,4 @@
 build
 rc.conf
+squeezie-raspberry*.img
+cmdline.txt
