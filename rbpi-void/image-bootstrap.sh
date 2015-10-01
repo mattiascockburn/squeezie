@@ -2,10 +2,15 @@
 set -u
 # This script will be executed inside the chroot
 
+DEV=1
+
 echo squeezie > /etc/hostname
 export XBPS_TARGET_ARCH=armv6l
 xbps-install -Suy
 xbps-install -Sy openssh python3 alsa-utils rpi-kernel rpi-firmware faad2 libmad python3.4-Flask python3.4-pip python3.4-requests
+if [ "$DEV" -eq 1 ];then
+  xbps-install -Sy git vim 
+fi
 
 useradd -m -G audio squeezie
 
@@ -14,7 +19,11 @@ cat <<EOF >>/etc/fstab
 EOF
 
 pushd /etc/runit/runsvdir/default/
-rm agetty-tty{3,4,5,6} sshd
+rm agetty-tty{3,4,5,6} 
+
+if [ "$DEBUG" -ne 1 ];then
+  rm sshd
+fi
 for sv in alsa squeezelite;do
   ln -s /etc/sv/$sv .
 done
@@ -23,7 +32,8 @@ popd
 # Add system user for dbus service, wondering why this is not done automatically
 #useradd -r -U dbus
 
-rm -rf /usr/share/man /var/cache/xbps/* /usr/share/doc/*
+# remove unneeded files
+rm -rf /usr/share/man /var/cache/xbps/* /usr/share/doc/* 
 
 >/etc/resolv.conf
 
@@ -41,8 +51,8 @@ cat <<EOF >/etc/sv/squeezelite/run
 #!/bin/sh
 sv start alsa || exit 1
 sv start dhcpcd || exit 1
->/var/log/squeeze.log
+>/tmp/squeeze.log
 . /etc/squeezelite.cfg
-exec chpst -u squeezie:squeezie /usr/local/bin/squeezelite -s \$SERVER -n \$NAME -o \$OUTPUT -d all=\$LOGLEVEL -f /var/log/squeeze.log
+exec chpst -u squeezie:audio /usr/local/bin/squeezelite -s \$SERVER -n \$NAME -o \$OUTPUT -d all=\$LOGLEVEL -f /tmp/squeeze.log
 EOF
-
+chmod +x /etc/sv/squeezelite/run
