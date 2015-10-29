@@ -87,9 +87,9 @@ wget -c "${SQUEEZEURL}/${SQUEEZE}" -O "${BUILD}/${SQUEEZE}"
 
 echo Creating partition table
 ped 'mktable msdos'
-ped 'mkpart primary fat32 2048s 256MB'
+ped 'mkpart primary fat32 2048s 100MB'
 ped 'toggle 1 boot'
-ped 'mkpart primary ext4 256MB -1'
+ped 'mkpart primary ext4 100MB -1'
 
 sudo kpartx -avs ${LOOP}
 
